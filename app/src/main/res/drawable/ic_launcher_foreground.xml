@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shield with keyhole, sized for the 108dp adaptive-icon canvas (safe zone 66dp). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#4FD1C5"
+        android:pathData="M54,28 L76,36 L76,54 C76,67 66.5,78 54,82 C41.5,78 32,67 32,54 L32,36 Z" />
+    <path
+        android:fillColor="#0F1B2D"
+        android:pathData="M54,44 C57.9,44 61,47.1 61,51 C61,53.6 59.6,55.8 57.5,57 L59,67 L49,67 L50.5,57 C48.4,55.8 47,53.6 47,51 C47,47.1 50.1,44 54,44 Z" />
+</vector>

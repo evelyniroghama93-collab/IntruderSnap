@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Camera is optional: the app must still install and run the lock-screen test without one. -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
+    <!-- Camera feasibility screen only (tests A-G). Never used silently. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Threshold alert notification (runtime permission on Android 13+). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Visible camera foreground service used by feasibility tests C, D and E. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+
+    <!-- Records a "boot broadcast received" marker only; used to diagnose Xiaomi Autostart behaviour. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:name=".IntruderSnapApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.IntruderSnap">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Device administrator receiver.
+            - BIND_DEVICE_ADMIN guarantees only the system can deliver admin broadcasts.
+            - directBootAware lets the receiver run before the first unlock after a reboot,
+              writing to device-protected storage.
+            - The policy file requests ONLY watch-login.
+        -->
+        <receiver
+            android:name=".admin.IntruderSnapAdminReceiver"
+            android:description="@string/device_admin_description"
+            android:directBootAware="true"
+            android:exported="true"
+            android:label="@string/device_admin_label"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".boot.BootReceiver"
+            android:directBootAware="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".camera.CameraFeasibilityService"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
+
+    </application>
+
+</manifest>

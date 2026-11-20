@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    IntruderSnap requests exactly one device administration policy:
+    watch-login (DeviceAdminInfo.USES_POLICY_WATCH_LOGIN).
+
+    It allows:
+      - DeviceAdminReceiver.onPasswordFailed / onPasswordSucceeded callbacks
+      - DevicePolicyManager.getCurrentFailedPasswordAttempts()
+
+    Deliberately NOT requested: wipe-data, reset-password, force-lock, limit-password,
+    expire-password, encrypted-storage, disable-camera, disable-keyguard-features.
+-->
+<device-admin>
+    <uses-policies>
+        <watch-login />
+    </uses-policies>
+</device-admin>
