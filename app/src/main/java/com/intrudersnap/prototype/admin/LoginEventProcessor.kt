@@ -7,6 +7,7 @@ import android.util.Log
 import com.intrudersnap.prototype.camera.BackgroundCameraExperiment
 import com.intrudersnap.prototype.data.EventRepository
 import com.intrudersnap.prototype.data.EventType
+import com.intrudersnap.prototype.data.RuntimeEnvironment
 import com.intrudersnap.prototype.data.SettingsRepository
 import com.intrudersnap.prototype.domain.ThresholdPolicy
 import com.intrudersnap.prototype.notify.Notifier
@@ -37,7 +38,9 @@ object LoginEventProcessor {
         Log.i(
             TAG,
             "onPasswordFailed received: systemCount=${system.countOrNull ?: "unavailable"} " +
-                "prototypeCount=$prototypeCount threshold=$threshold"
+                "prototypeCount=$prototypeCount threshold=$threshold " +
+                "uiInProcess=${RuntimeEnvironment.uiCreatedInProcess} processAgeMs=${RuntimeEnvironment.processAgeMs()} " +
+                RuntimeEnvironment.backgroundState(context)
         )
 
         events.record(

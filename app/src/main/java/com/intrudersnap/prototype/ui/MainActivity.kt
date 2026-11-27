@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.intrudersnap.prototype.data.RuntimeEnvironment
 import com.intrudersnap.prototype.ui.camera.CameraTestScreen
 import com.intrudersnap.prototype.ui.dashboard.DashboardScreen
 import com.intrudersnap.prototype.ui.history.HistoryScreen
@@ -37,6 +38,7 @@ import com.intrudersnap.prototype.ui.theme.IntruderSnapTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        RuntimeEnvironment.uiCreatedInProcess = true
         enableEdgeToEdge()
         setContent {
             IntruderSnapTheme {

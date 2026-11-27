@@ -78,6 +78,9 @@ class EventRepository private constructor(context: Context) {
                 bootCount = RuntimeEnvironment.bootCount(appContext),
                 sessionId = RuntimeEnvironment.processSessionId,
                 note = note,
+                uiInProcess = RuntimeEnvironment.uiCreatedInProcess,
+                processAgeMs = RuntimeEnvironment.processAgeMs(),
+                backgroundState = RuntimeEnvironment.backgroundState(appContext),
             )
             try {
                 file.parentFile?.mkdirs()

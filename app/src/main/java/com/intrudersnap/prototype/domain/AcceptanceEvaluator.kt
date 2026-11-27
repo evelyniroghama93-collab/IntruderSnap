@@ -30,6 +30,11 @@ enum class AcceptanceItem(val title: String, val howToTest: String) {
         "Reboot behaviour",
         "Reboot, enter a wrong credential on the first lock screen, unlock, then open the app.",
     ),
+    BACKGROUND_DELIVERY(
+        "Xiaomi/HyperOS background delivery",
+        "Close IntruderSnap fully (adb shell am kill com.intrudersnap.prototype, or swipe it away and wait 10+ min), " +
+            "lock the phone, enter one wrong credential, unlock with the PIN, then open the app.",
+    ),
     BACKGROUND_CAMERA(
         "Background camera feasibility",
         "Arm test E on the Camera tab, lock the phone, enter one wrong credential.",
@@ -62,6 +67,7 @@ object AcceptanceEvaluator {
             AcceptanceItem.THRESHOLD -> threshold(events)
             AcceptanceItem.PERSISTENCE -> persistence(events, currentSessionId)
             AcceptanceItem.REBOOT -> reboot(events)
+            AcceptanceItem.BACKGROUND_DELIVERY -> backgroundDelivery(events)
             AcceptanceItem.BACKGROUND_CAMERA -> backgroundCamera(settings)
         }
         if (item.name in settings.manualFailures) {
@@ -169,6 +175,47 @@ object AcceptanceEvaluator {
             }
         }
         return AcceptanceResult(AcceptanceItem.REBOOT, TestOutcome.NOT_TESTED, "No failed callback recorded after a reboot yet.$directNote")
+    }
+
+    /**
+     * PASS only when a failed callback was written by a process in which IntruderSnap's screen
+     * had never been created - i.e. Android/HyperOS started (or kept) the process purely to
+     * deliver the lock-screen broadcast. Callbacks received while the app's UI process was
+     * alive (even if the phone was locked) do not count, because they do not show what
+     * happens after HyperOS has ended the app.
+     */
+    private fun backgroundDelivery(events: List<SecurityEvent>): AcceptanceResult {
+        val f = failed(events)
+        if (f.isEmpty()) {
+            return AcceptanceResult(AcceptanceItem.BACKGROUND_DELIVERY, TestOutcome.NOT_TESTED, "No failed-password events yet.")
+        }
+        val withDiagnostics = f.filter { it.hasDiagnostics }
+        if (withDiagnostics.isEmpty()) {
+            return AcceptanceResult(
+                AcceptanceItem.BACKGROUND_DELIVERY,
+                TestOutcome.NOT_TESTED,
+                "Existing callbacks were recorded by a build without background diagnostics. Repeat with this build.",
+            )
+        }
+        val cold = withDiagnostics.filter { !it.uiInProcess }
+        return if (cold.isNotEmpty()) {
+            val latest = cold.first()
+            val coldStart = cold.count { it.processAgeMs in 0..10_000 }
+            AcceptanceResult(
+                AcceptanceItem.BACKGROUND_DELIVERY,
+                TestOutcome.PASS,
+                "${cold.size} failed callback(s) delivered while IntruderSnap was not open " +
+                    "($coldStart in a process started within 10 s of the callback). " +
+                    "Latest: process age ${latest.processAgeMs} ms, ${latest.backgroundState}.",
+            )
+        } else {
+            AcceptanceResult(
+                AcceptanceItem.BACKGROUND_DELIVERY,
+                TestOutcome.NOT_TESTED,
+                "All ${withDiagnostics.size} diagnosed callback(s) arrived while the app's screen process was alive. " +
+                    "Close the app fully and repeat.",
+            )
+        }
     }
 
     private fun backgroundCamera(settings: AppSettings): AcceptanceResult {

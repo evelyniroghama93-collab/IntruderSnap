@@ -55,6 +55,7 @@ object ReportBuilder {
                     "proto=${e.prototypeFailCount} prev=${e.previousFailedCount} thr=${e.threshold} " +
                     "callback=${e.callbackReceived} unlocked=${e.userUnlocked} boot=${e.bootCount} " +
                     "proc=${e.sessionId} model=${e.deviceModel}" +
+                    (if (e.hasDiagnostics) " ui=${e.uiInProcess} age=${e.processAgeMs}ms [${e.backgroundState}]" else "") +
                     (e.systemCountError?.let { " err=$it" } ?: "") +
                     (if (e.note.isNotBlank()) " note=${e.note}" else "")
             )

@@ -1,18 +1,32 @@
 package com.intrudersnap.prototype.data
 
+import android.app.ActivityManager
+import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.os.Build
+import android.os.PowerManager
+import android.os.Process
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.os.UserManagerCompat
 import java.util.UUID
 
 /**
  * Facts about the current process / boot that are attached to every event.
- * They make persistence and reboot behaviour verifiable from the history alone.
+ * They make persistence, reboot and background-delivery behaviour verifiable from
+ * the history alone.
  */
 object RuntimeEnvironment {
 
     /** Random ID generated once per app process. A new process gets a new ID. */
     val processSessionId: String = UUID.randomUUID().toString().substring(0, 8)
+
+    /**
+     * Set by MainActivity.onCreate. Stays false in a process that the system started
+     * only to deliver a broadcast (e.g. a lock-screen callback while the app was closed).
+     */
+    @Volatile
+    var uiCreatedInProcess: Boolean = false
 
     /** Settings.Global.BOOT_COUNT increases by one on every boot; -1 if unavailable. */
     fun bootCount(context: Context): Int = try {
@@ -24,4 +38,47 @@ object RuntimeEnvironment {
     /** False while the device is in Direct Boot (before the first unlock after reboot). */
     fun isUserUnlocked(context: Context): Boolean =
         UserManagerCompat.isUserUnlocked(context)
+
+    /** Milliseconds since this app process was started by the system. */
+    fun processAgeMs(): Long =
+        SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()
+
+    /**
+     * One-line snapshot of the power-management state that can affect delivery on
+     * Xiaomi devices. Uses only public APIs and reads only this app's own state.
+     */
+    fun backgroundState(context: Context): String {
+        val parts = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val bucket = try {
+                bucketName(context.getSystemService(UsageStatsManager::class.java).appStandbyBucket)
+            } catch (e: Exception) {
+                "unknown"
+            }
+            parts += "standbyBucket=$bucket"
+            val restricted = try {
+                context.getSystemService(ActivityManager::class.java).isBackgroundRestricted.toString()
+            } catch (e: Exception) {
+                "unknown"
+            }
+            parts += "backgroundRestricted=$restricted"
+        }
+        val ignoringOptimizations = try {
+            context.getSystemService(PowerManager::class.java)
+                .isIgnoringBatteryOptimizations(context.packageName).toString()
+        } catch (e: Exception) {
+            "unknown"
+        }
+        parts += "ignoringBatteryOptimizations=$ignoringOptimizations"
+        return parts.joinToString(", ")
+    }
+
+    private fun bucketName(bucket: Int): String = when (bucket) {
+        UsageStatsManager.STANDBY_BUCKET_ACTIVE -> "ACTIVE"
+        UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "WORKING_SET"
+        UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "FREQUENT"
+        UsageStatsManager.STANDBY_BUCKET_RARE -> "RARE"
+        45 -> "RESTRICTED" // UsageStatsManager.STANDBY_BUCKET_RESTRICTED (API 30)
+        else -> "OTHER($bucket)"
+    }
 }

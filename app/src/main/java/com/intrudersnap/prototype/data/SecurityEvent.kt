@@ -33,6 +33,11 @@ enum class EventType(val label: String) {
  * @property userUnlocked false if recorded during Direct Boot (before first unlock).
  * @property bootCount Settings.Global.BOOT_COUNT at the time of the event.
  * @property sessionId ID of the app process that wrote the event.
+ * @property uiInProcess true if IntruderSnap's screen had been created in the process that
+ *   wrote the event. False means the system started/kept the process only for the broadcast.
+ * @property processAgeMs how long the writing process had been alive (small = cold start).
+ * @property backgroundState power-management snapshot (standby bucket, restrictions).
+ *   Blank for records written by builds before this field existed.
  */
 data class SecurityEvent(
     val id: Long,
@@ -50,7 +55,13 @@ data class SecurityEvent(
     val bootCount: Int,
     val sessionId: String,
     val note: String,
+    val uiInProcess: Boolean = true,
+    val processAgeMs: Long = -1L,
+    val backgroundState: String = "",
 ) {
+    /** True when the background diagnostics were recorded (newer builds only). */
+    val hasDiagnostics: Boolean get() = backgroundState.isNotBlank()
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("type", type.name)
@@ -67,6 +78,9 @@ data class SecurityEvent(
         put("bootCount", bootCount)
         put("sessionId", sessionId)
         put("note", note)
+        put("uiInProcess", uiInProcess)
+        put("processAgeMs", processAgeMs)
+        put("backgroundState", backgroundState)
     }
 
     companion object {
@@ -90,6 +104,9 @@ data class SecurityEvent(
             bootCount = o.optInt("bootCount", -1),
             sessionId = o.optString("sessionId", ""),
             note = o.optString("note", ""),
+            uiInProcess = o.optBoolean("uiInProcess", true),
+            processAgeMs = o.optLong("processAgeMs", -1L),
+            backgroundState = o.optString("backgroundState", ""),
         )
     }
 }

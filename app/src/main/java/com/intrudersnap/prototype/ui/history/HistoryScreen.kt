@@ -122,6 +122,13 @@ private fun EventCard(e: SecurityEvent) {
             }
             InfoRow("Recorded before first unlock", if (e.userUnlocked) "No" else "Yes (Direct Boot)")
             InfoRow("Boot # / process", "${e.bootCount} / ${e.sessionId}")
+            if (e.hasDiagnostics) {
+                InfoRow(
+                    "App open in process",
+                    if (e.uiInProcess) "Yes" else "No (process age ${e.processAgeMs} ms)",
+                )
+                InfoRow("Power state", e.backgroundState)
+            }
             if (e.note.isNotBlank()) {
                 Text(e.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
