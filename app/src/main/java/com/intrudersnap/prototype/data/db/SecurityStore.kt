@@ -26,7 +26,8 @@ class SecurityStore(context: Context, name: String = DB_NAME) :
 
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
-        db.execSQL("PRAGMA secure_delete = ON")
+        // PRAGMA returns a row, so it must run through rawQuery (execSQL rejects it on Android).
+        db.rawQuery("PRAGMA secure_delete = ON", null).use { it.moveToFirst() }
     }
 
     override fun onCreate(db: SQLiteDatabase) {

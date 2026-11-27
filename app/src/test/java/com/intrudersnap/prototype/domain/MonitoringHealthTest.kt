@@ -17,7 +17,8 @@ class MonitoringHealthTest {
         callbacks: Int = 5,
         lastCold: Long = now - day,
         lastMissed: Long = 0L,
-    ) = HealthInputs(adminActive, watchLogin, secure, bgRestricted, bucketRestricted, callbacks, lastCold, lastMissed, now)
+        storageError: String? = null,
+    ) = HealthInputs(adminActive, watchLogin, secure, bgRestricted, bucketRestricted, callbacks, lastCold, lastMissed, now, storageError)
 
     @Test fun verifiedWhenColdDeliveryRecent() =
         assertEquals(Confidence.VERIFIED, MonitoringHealth.assess(inputs()).confidence)
@@ -51,6 +52,9 @@ class MonitoringHealthTest {
 
     @Test fun activeUnverifiedWhenVerificationIsOld() =
         assertEquals(Confidence.ACTIVE_UNVERIFIED, MonitoringHealth.assess(inputs(lastCold = now - 31 * day)).confidence)
+
+    @Test fun storageFailureIsNeverReportedAsVerified() =
+        assertEquals(Confidence.RESTRICTED, MonitoringHealth.assess(inputs(storageError = "Could not save")).confidence)
 
     @Test fun unknownRestrictionStateDoesNotClaimRestricted() =
         assertEquals(Confidence.VERIFIED, MonitoringHealth.assess(inputs(bgRestricted = null, bucketRestricted = null)).confidence)

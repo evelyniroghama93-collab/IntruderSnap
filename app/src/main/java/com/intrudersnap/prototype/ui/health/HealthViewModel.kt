@@ -8,7 +8,6 @@ import com.intrudersnap.prototype.admin.AdminController
 import com.intrudersnap.prototype.auth.OwnerSession
 import com.intrudersnap.prototype.data.AppSettings
 import com.intrudersnap.prototype.data.EventRepository
-import com.intrudersnap.prototype.data.EventType
 import com.intrudersnap.prototype.data.RuntimeEnvironment
 import com.intrudersnap.prototype.data.SecurityEvent
 import com.intrudersnap.prototype.data.SettingsRepository
@@ -58,7 +57,7 @@ class HealthViewModel(app: Application) : AndroidViewModel(app) {
     private val snapshot = MutableStateFlow(SystemSnapshot())
 
     val state: StateFlow<HealthUiState> =
-        combine(events.events, settings.settings, snapshot) { ev, st, snap -> build(ev, st, snap) }
+        combine(events.events, settings.settings, snapshot, events.storageError) { ev, st, snap, err -> build(ev, st, snap, err) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HealthUiState())
 
     /** Runs the app-open checks, then re-reads everything from Android. */
@@ -104,7 +103,7 @@ class HealthViewModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
-    private fun build(ev: List<SecurityEvent>, st: AppSettings, snap: SystemSnapshot): HealthUiState {
+    private fun build(ev: List<SecurityEvent>, st: AppSettings, snap: SystemSnapshot, storageError: String?): HealthUiState {
         val callbacks = ev.filter { it.type.isLockScreenCallback && it.callbackReceived }
         // Evidence that a callback reached IntruderSnap while it was not open:
         //  - newer builds record uiInProcess=false;
@@ -129,6 +128,7 @@ class HealthViewModel(app: Application) : AndroidViewModel(app) {
                     lastColdDeliveryAt = lastCold,
                     lastMissedDetectedAt = st.lastMissedDetectedAt,
                     now = System.currentTimeMillis(),
+                    storageError = storageError,
                 ),
             )
         }
@@ -141,9 +141,5 @@ class HealthViewModel(app: Application) : AndroidViewModel(app) {
             callbackCount = callbacks.size,
             pendingAlert = if (st.pendingAlertEventId > 0) ev.firstOrNull { it.id == st.pendingAlertEventId } else null,
         )
-    }
-
-    companion object {
-        fun isFailedCallback(e: SecurityEvent) = e.type == EventType.PASSWORD_FAILED
     }
 }

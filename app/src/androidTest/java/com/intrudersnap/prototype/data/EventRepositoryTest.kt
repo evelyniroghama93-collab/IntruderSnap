@@ -49,6 +49,19 @@ class EventRepositoryTest {
     }
 
     @Test
+    fun secureDeleteIsEnabledAndWalIsOff() {
+        val db = rawStore().readableDatabase
+        db.rawQuery("PRAGMA secure_delete", null).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+        }
+        db.rawQuery("PRAGMA journal_mode", null).use { c ->
+            assertTrue(c.moveToFirst())
+            assertFalse(c.getString(0).equals("wal", ignoreCase = true))
+        }
+    }
+
+    @Test
     fun recordsSurviveANewRepositoryInstance() {
         repo().record(type = EventType.PASSWORD_FAILED, systemFailedCount = 1, source = "test", classification = "NORMAL", incidentCount = 1)
         val reloaded = repo().events.value

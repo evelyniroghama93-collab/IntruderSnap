@@ -22,6 +22,8 @@ data class HealthInputs(
     /** Time missed failures were last detected by reconciliation (0 = never). */
     val lastMissedDetectedAt: Long,
     val now: Long,
+    /** Non-null when IntruderSnap could not save or read its records. */
+    val storageError: String? = null,
 )
 
 data class HealthAssessment(val confidence: Confidence, val reasons: List<String>)
@@ -39,6 +41,7 @@ object MonitoringHealth {
         else if (!i.watchLoginGranted) reasons += "Watch-login policy is not granted."
         if (reasons.isNotEmpty()) return HealthAssessment(Confidence.PERMISSION_REQUIRED, reasons)
 
+        i.storageError?.let { reasons += "Records are not being saved reliably: $it" }
         if (i.backgroundRestricted == true) reasons += "Android reports IntruderSnap as background-restricted."
         if (i.standbyBucketRestricted == true) reasons += "IntruderSnap is in the RESTRICTED app-standby bucket."
         val missedAfterVerification = i.lastMissedDetectedAt > 0 && i.lastMissedDetectedAt >= i.lastColdDeliveryAt

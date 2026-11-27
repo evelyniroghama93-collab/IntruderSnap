@@ -38,6 +38,14 @@ class EventRepository private constructor(
     /** Newest first. */
     val events: StateFlow<List<SecurityEvent>> = _events.asStateFlow()
 
+    private val _storageError = MutableStateFlow<String?>(null)
+
+    /**
+     * Last storage failure (write or read), or null when the last operation succeeded.
+     * Shown on the Health screen so a failing store is never silent.
+     */
+    val storageError: StateFlow<String?> = _storageError.asStateFlow()
+
     init {
         synchronized(lock) {
             migrateLegacyJsonl()
@@ -154,9 +162,10 @@ class EventRepository private constructor(
             json
         }
         val id = try {
-            store.insert(event.timestampMillis, encrypted, payload)
+            store.insert(event.timestampMillis, encrypted, payload).also { _storageError.value = null }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to persist event type=${event.type.name}", e)
+            _storageError.value = "Could not save a ${event.type.label} record (${e.javaClass.simpleName})."
             -1L
         }
         return event.copy(id = id)
@@ -180,6 +189,7 @@ class EventRepository private constructor(
         }
     } catch (e: Exception) {
         Log.e(TAG, "Failed to read history", e)
+        _storageError.value = "Could not read the security history (${e.javaClass.simpleName})."
         emptyList()
     }
 
