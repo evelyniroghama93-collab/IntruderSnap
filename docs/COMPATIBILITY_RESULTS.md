@@ -35,7 +35,7 @@ Evidence files:
 | 5 | Event persistence | **PASS** | 42 callback events written by earlier app processes were reloaded from device-protected storage. |
 | 6 | Reboot behaviour | **PASS** | Callbacks were recorded across 4 boots. **3 failed callbacks were recorded before the first unlock after a reboot (Direct Boot).** Boot broadcasts were delivered: #68 `LOCKED_BOOT_COMPLETED` at 02:53:25 (user locked), #69 `BOOT_COMPLETED` at 07:01:01 (after first unlock). |
 | 7 | Xiaomi/HyperOS background behaviour | **PASS (limited scope)** | The 3 Direct-Boot callbacks were delivered to an IntruderSnap process the user **could not have opened**: the app's screen cannot run before the first unlock. So HyperOS delivered lock-screen callbacks to an app that was not open, at least after a reboot. **Still NOT TESTED:** delivery after HyperOS kills a long-idle app, and the battery/Autostart configuration matrix. The settings in use were not recorded. |
-| 8 | Background camera feasibility | **PASS — needs a controlled repeat** | Test E reported: "Camera delivered one 1920x2560 frame from the background after a lock-screen callback through a camera foreground service. Frame discarded." The timing of the run is not in the report. If IntruderSnap was on screen within ~10 s before the wrong PIN, Android's short grace period could explain the result. Build 5 records this context and will not count a grace-period success as PASS. |
+| 8 | Background camera feasibility | **PASS** | Controlled repeat on 2026-11-27: test E was armed at 17:22:57 and the app was last on screen at ~17:23:01 (test F record). The tester closed the app, locked the phone, **waited at least 1 minute**, and entered one wrong PIN. At **17:26:58** the camera foreground service started from the background and delivered one 1920x2560 frame (discarded). Roughly 4 minutes separate the app being visible and the capture, which rules out Android's short grace period. Why Android allowed it has not been established (possibly an exemption linked to active device-admin status). Evidence: `camera-test-E-pass-172658.png`. |
 
 **Main acceptance criterion — real failed-password callbacks from the Redmi's native lock screen: PASS.**
 
@@ -47,8 +47,8 @@ Evidence files:
 | B. CameraX while visible | **PASS** | 1920x2560 frame while visible; discarded. |
 | C. Camera foreground service (visible) | **PASS** | 1920x2560 frame through the camera FGS while visible; discarded. |
 | D. Android 14 FGS requirements | **PASS** | `startForeground(type=FOREGROUND_SERVICE_TYPE_CAMERA)` accepted on API 34 with `FOREGROUND_SERVICE_CAMERA` declared and CAMERA granted. |
-| E. Background start after callback | **PASS (to be repeated)** | See row 8 above. |
-| F. Privacy indicator | **PASS for B/C** | Green camera indicator seen during B/C. **Not recorded for E**: whether the indicator and the "camera experiment" notification appeared on the lock screen. |
+| E. Background start after callback | **PASS** | 17:26:58, app closed, phone locked ≥ 1 min. See row 8. |
+| F. Privacy indicator | **PASS for B/C · FAIL for E (as observed)** | Green indicator seen during B/C. During the background capture in E, the tester **did not see the camera indicator** on the lock screen. Not yet established: whether HyperOS did not show it on the lock screen, or it appeared too briefly to notice. Check with Android's Privacy dashboard (does it list IntruderSnap camera use at 17:26:58?) or film the lock screen with a second phone. |
 | G. Denial behaviour | **BLOCKED (permission-denial case)** | When camera permission was denied, the app could not open the camera, reported BLOCKED and kept recording lock-screen events. A background-denial case was not observed, because Android allowed test E. |
 
 ### Logs
@@ -72,10 +72,13 @@ No logcat was captured. The evidence is the in-app report and screenshots. Repre
 - The system counter reached 8 during earlier testing. Android applies lockout delays from the 5th failure, so stay at 3–4 in future runs.
 - Some earlier tests ran with threshold = 1 (#67 shows `thr=1`). The 2026-11-27 run used 3.
 
-## Remaining checks (build 5, short)
+## Remaining checks
 
-1. **Repeat test E under controlled conditions.** Arm test E on the Camera tab, close IntruderSnap (Home, then swipe it from Recents), lock the phone, wait **at least 1 minute**, then enter one wrong PIN. Watch the lock screen for the green camera dot and the "camera experiment" notification (test F for E). Build 5 records whether the device was locked and how long ago the app was on screen.
-2. **Background delivery after an idle kill:** follow TEST_PLAN Test 15. Record the Autostart and Battery saver settings in use.
+1. **Camera indicator during E:**
+   - Open Settings › Privacy (or Privacy protection) › **Privacy dashboard / Permission usage** › Camera, and see whether IntruderSnap's access at 17:26:58 is listed.
+   - Repeat E once while filming the lock screen with another phone.
+   - Also record whether the "IntruderSnap camera experiment" notification appeared.
+2. **Background delivery after an idle kill:** follow TEST_PLAN Test 15, ideally on build 5, which records the process diagnostics. Record the Autostart and Battery saver settings in use.
 3. Capture logcat for one run if a computer is available.
 
 ## Recommendation
@@ -94,8 +97,8 @@ Native lock-screen monitoring is **feasible and verified** on the Redmi 12C / Hy
 - a versioned event store;
 - a guided HyperOS setup screen.
 
-**Camera evidence capture should remain a separate gated item, not part of Milestone 2's core.** Test E suggests background capture may be technically possible on this device, but before it is built:
-1. Confirm E with the controlled repeat above, and confirm that the notification and privacy indicator are visible on the lock screen. The capture must stay visible, never hidden.
+**Camera evidence capture should remain a separate gated item, not part of Milestone 2's core.** Test E proved that background capture is technically possible on this device, but before it is built:
+1. Resolve the indicator finding. On this device the tester did not see a camera indicator during the background capture. The requirement is that capture is never secret, so the product must show its own clear, persistent disclosure (for example a lock-screen notification) and must not rely on the OS indicator alone.
 2. Find out *why* Android allowed it (for example an exemption tied to active device-admin status). If it depends on that, it may change with Android versions or OEM builds, and must be re-verified per device and OS update.
 3. Complete a privacy and policy review before any image is kept. Photographing people who pick up the phone raises data-protection questions (for example consent and notice duties under the Nigeria Data Protection Act 2023) and app-store policy questions.
 
