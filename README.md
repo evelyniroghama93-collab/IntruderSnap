@@ -4,7 +4,13 @@ This prototype answers one question: **can IntruderSnap find out when someone en
 
 It uses the official Device Administration API (`DeviceAdminReceiver` with the `watch-login` policy only). There is no fake lock screen.
 
-> **Status:** code complete, **not yet verified on a device**. Every acceptance result is **NOT TESTED** until the physical-device test plan has been run. Nothing in this repository claims a result that has not been observed.
+> **Milestone 1** (branch `milestone-1-feasibility-spike`): native lock-screen monitoring was **verified** on a Redmi 12C running HyperOS OS1.0.16.0. See [docs/COMPATIBILITY_RESULTS.md](docs/COMPATIBILITY_RESULTS.md).
+>
+> **Milestone 2** (branch `milestone-2-monitoring-core`, this branch): reliable monitoring core. It covers reconciliation with Android's counter, guided HyperOS setup, a monitoring-health screen, owner-protected encrypted history, admin-loss detection and retention. It is CI-verified (build, 38 unit tests, 11 emulator integration tests, no-internet check). **Physical-device results: NOT TESTED.** Design, file paths and known limitations are in [docs/MILESTONE_2.md](docs/MILESTONE_2.md); device tests M2-0 to M2-14 are in [docs/TEST_PLAN.md](docs/TEST_PLAN.md).
+>
+> Neither branch is merged into `main` until the project lead has reviewed the physical-device results. Nothing in this repository claims a result that has not been observed.
+>
+> Since Milestone 2: minimum Android version is **11 (API 30)**. The main tabs are Health · History · Setup · Settings. The Milestone 1 camera tools and acceptance screen are under **Labs**, hidden unless an authenticated owner enables experimental tools.
 
 ---
 

@@ -103,3 +103,28 @@ Native lock-screen monitoring is **feasible and verified** on the Redmi 12C / Hy
 3. Complete a privacy and policy review before any image is kept. Photographing people who pick up the phone raises data-protection questions (for example consent and notice duties under the Nigeria Data Protection Act 2023) and app-store policy questions.
 
 The feasibility branch stays separate from `main` until these results are reviewed.
+
+
+---
+
+# Milestone 2 — Reliable Monitoring Core (branch `milestone-2-monitoring-core`)
+
+**Build:** debug-build-9 (commit 11a4bb8). CI build, 38 unit tests, 11 emulator integration tests and the no-INTERNET check pass. **None of that is a device result.**
+
+| # | Physical-device test | Result | Observation |
+|---|---|---|---|
+| M2-0 | Upgrade and migration of Milestone 1 history | NOT TESTED | |
+| M2-1 | Owner authentication (biometric and PIN fallback, auto-lock) | NOT TESTED | |
+| M2-2 | Protected settings + audit records | NOT TESTED | |
+| M2-3 | Protected deletion + "history cleared" record | NOT TESTED | |
+| M2-4 | Callback, counter, threshold with the new incident logic | NOT TESTED | |
+| M2-5 | New incident after a biometric unlock + 15-min gap | NOT TESTED | |
+| M2-6 | **Long-idle HyperOS background delivery** | NOT TESTED | (Milestone 1 open item) |
+| M2-7 | Reconciliation of missed callbacks | NOT TESTED | |
+| M2-8 | Admin loss detection (in-app deactivation) | NOT TESTED | |
+| M2-9 | Admin loss via Android Settings | NOT TESTED | |
+| M2-10 | Reboot / Direct Boot with encrypted storage | NOT TESTED | |
+| M2-11 | Health confidence states | NOT TESTED | |
+| M2-12 | Retention setting | NOT TESTED | |
+| M2-13 | Labs hidden by default | NOT TESTED | |
+| M2-14 | Camera Privacy Dashboard / lock-screen notification (experimental) | NOT TESTED | |

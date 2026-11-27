@@ -63,3 +63,41 @@ Do not disable any Android security protection for these tests.
 ## Emulator (optional, separate)
 
 On an Android 14 emulator image, set a PIN, activate the admin, then lock the emulator and enter a wrong PIN. Emulator results go only in the "Emulator" column. They show that the code path works on AOSP, not on MIUI/HyperOS.
+
+---
+
+# Milestone 2 — Physical-device test plan (Redmi 12C, HyperOS OS1.0.16.0)
+
+**Build:** `debug-build-9` or newer from the repo's Releases page (branch `milestone-2-monitoring-core`).
+**Rules:** same safety rules as above. Never more than **4** wrong attempts in a row; unlock with the **PIN** unless a step says otherwise. Record only what you observe, in `docs/COMPATIBILITY_RESULTS.md` › Milestone 2.
+
+## Install and upgrade
+
+| # | Action | Expected | Record |
+|---|---|---|---|
+| M2-0 | Install the new APK **over** the existing app (do not uninstall). Open it. | Health tab opens. History (after unlocking) contains a *Storage notice*: "Migrated N Milestone 1 record(s) into encrypted storage". The device admin is still active. | PASS/FAIL, N |
+
+## Requirement tests
+
+| # | Requirement | Action | Expected | Record |
+|---|---|---|---|---|
+| M2-1 | Owner authentication | Tap **History**. Tap Unlock and cancel the prompt. Then unlock with fingerprint. Leave the app (Home), return and open History. | Cancel → still locked. Fingerprint → history visible. After returning → locked again. Repeat once using the PIN fallback. | PASS/FAIL |
+| M2-2 | Protected settings | Settings › change threshold 3 → 5 → 3. | Requires unlock; two *Setting changed by owner* records appear in History. | PASS/FAIL |
+| M2-3 | Protected deletion | History › Clear › Continue → authenticate. | All records removed except one *History cleared by owner* record. Clearing is impossible without authenticating. | PASS/FAIL |
+| M2-4 | Callback, counter, threshold | Lock. Enter 3 wrong PINs. Unlock with the PIN. | 3 × *Password failed* (Android count 1, 2, 3; incident 1, 2, 3; classification Normal), 1 × *Intrusion threshold reached*, 1 × *Password succeeded* (previous failed attempts 3). Notification posted. | PASS/FAIL |
+| M2-5 | Biometric-unlock incident rule | Lock. Enter 3 wrong PINs → alert. Unlock with **fingerprint**. Wait **16 minutes**. Lock, enter 3 wrong PINs, then unlock with the PIN. | The second group starts a *New incident* (incident counts 1, 2, 3, while Android's count continues 4, 5, 6) and raises a **second** intrusion alert. | PASS/FAIL |
+| M2-6 | **Long-idle background delivery (Milestone 1 open item)** | Note the Setup step 8 status. Swipe IntruderSnap away in Recents. Leave the phone locked and idle **≥ 2 hours** (overnight preferred). Enter **one** wrong PIN, then unlock with the PIN. Open IntruderSnap. | History: the failed record shows **App open when received: No** and a process age. Health › Background delivery test shows the new time; confidence **Verified** (if nothing else is restricted). If **no** record appears: run Health › *Reconcile with Android now*. A *Reconciliation* record "Android counted failures that were not delivered" means the callback was **missed**: record **FAIL**. | PASS/FAIL, idle hours, Autostart and Battery saver settings |
+| M2-7 | Reconciliation (missed callbacks) | Optional and diagnostic. If M2-6 recorded a miss, note the *Reconciliation* record. Otherwise mark NOT TESTED; it cannot be forced safely. | — | PASS/FAIL/NOT TESTED |
+| M2-8 | Admin loss detection | Settings › Deactivate (authenticate). Then re-activate from Health. | *Device admin disabled* record + a "IntruderSnap monitoring stopped" notification; Health shows **Permission required**; after re-activation, *Device admin enabled*. | PASS/FAIL |
+| M2-9 | Admin loss via Android Settings | Android Settings › … › Device admin apps › IntruderSnap › Deactivate. Do not open IntruderSnap for 1 minute. | Notification "IntruderSnap monitoring stopped" appears (from onDisabled). Opening the app shows a *Device admin disabled* record. Re-activate afterwards. | PASS/FAIL, delay |
+| M2-10 | Reboot | Reboot. On the first lock screen enter one wrong PIN, then unlock with the PIN. Open the app. | *Boot broadcast received* records, the failed record shows **Before first unlock: Yes**, and Health › Last reboot is updated. If it shows *Storage notice … re-encrypted*, the Keystore was unavailable before unlock: record that. | PASS/FAIL |
+| M2-11 | Health states | Read the Health screen after M2-6 and M2-8. | Confidence matches the situation: Permission required while deactivated; Verified / Active but delivery unverified otherwise. The reasons are shown. | PASS/FAIL |
+| M2-12 | Retention | Settings › Record retention › 30 days. | *Setting changed by owner* record. (Deletion of old records is covered by the emulator test; on the device just confirm that nothing recent disappeared.) | PASS/FAIL |
+| M2-13 | Labs hidden by default | Check that there is no Labs tab. Settings › enable experimental tools → a Labs tab appears and requires unlocking. Disable again. | As described. Test E cannot be armed while experimental tools are off. | PASS/FAIL |
+| M2-14 | Camera conditions (experimental, optional) | Only if requested by the project lead: after one Labs test E run, open Android Settings › Privacy › **Privacy dashboard** › Camera. | Record whether IntruderSnap camera access is listed, and whether the "IntruderSnap camera experiment" notification appeared on the lock screen. | Observation only |
+
+## Logs
+
+`adb logcat -v time -s IntruderSnap/Admin IntruderSnap/Login IntruderSnap/Events IntruderSnap/Health IntruderSnap/HealthJob IntruderSnap/Boot`
+
+Key lines: `onPasswordFailed received: systemCount=… class=… incidentCount=… uiInProcess=… processAgeMs=…`, `Reconciliation (…): …`, `Device admin found inactive (trigger=…)`. No credentials are ever logged.
