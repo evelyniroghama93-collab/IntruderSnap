@@ -1,0 +1,55 @@
+IntruderSnap - Milestone 1 feasibility report
+Generated: 2026-11-27 16:38:16 +0100
+Environment: PHYSICAL DEVICE or EMULATOR -> (tester: state which)
+
+== Device ==
+Manufacturer: Xiaomi / Brand: Redmi
+Model: Redmi 12C (22120RN86G) (device earth)
+Android: 14 (API 34)
+ROM: HyperOS OS1.0 (OS1.0.16.0.UCVMIXM)
+Build: UP1A.231005.007 / incremental V816.0.16.0.UCVMIXM
+Security patch: 2026-02-01
+Device admin active: true / watch-login granted: true
+Threshold: 3 (3 attempts)
+
+== Acceptance results ==
+Native failed-password callback: PASS
+   38 onPasswordFailed callback(s) recorded from the system.
+System attempt counter: PASS
+   System counter read in 38/38 failed events (max 8).
+Successful authentication callback: PASS
+   8 onPasswordSucceeded callback(s) recorded (last previous-failed count: 8).
+Threshold detection: PASS
+   6 intrusion event(s); last at threshold 3 (system count 3).
+Event persistence: PASS
+   42 callback event(s) written by an earlier app process were reloaded from device-protected storage.
+Reboot behaviour: PASS
+   Callbacks recorded across 4 boots. 3 failed callback(s) were recorded before the first unlock (Direct Boot).
+Background camera feasibility: PASS
+   Camera delivered one 1920x2560 frame from the background after a lock-screen callback through a camera foreground service. Frame discarded.
+
+== Camera feasibility ==
+A. Camera permission: PASS
+   CAMERA runtime permission granted by the owner.
+B. CameraX while IntruderSnap is visibly open: PASS
+   CameraX preview and capture worked while IntruderSnap was visible (1920x2560 frame). Owner test frame - not intruder evidence, not stored.
+C. Camera through a declared foreground service: PASS
+   Camera delivered one 1920x2560 frame while the app was visible through a camera foreground service. Frame discarded.
+D. Android 14 foreground-service camera requirements: PASS
+   startForeground(type=FOREGROUND_SERVICE_TYPE_CAMERA) accepted on API 34 with FOREGROUND_SERVICE_CAMERA declared and CAMERA granted, while the app was visible.
+E. Camera service started from background after lock-screen callback: PASS
+   Camera delivered one 1920x2560 frame from the background after a lock-screen callback through a camera foreground service. Frame discarded.
+F. Camera privacy indicator behaviour: PASS
+   Tester observed the green camera privacy indicator during test B/C.
+G. What happens when Android denies background camera access: BLOCKED
+   Permission denied: the app cannot open any camera. CameraX/foreground-service tests report BLOCKED and the app keeps recording lock-screen events normally.
+
+== Event history (newest first, max 100) ==
+#74 PASSWORD_FAILED 2026-11-27 16:37:20 +0100 sys=4 proto=4 prev=-1 thr=3 callback=true unlocked=true boot=2853 proc=69de16ee model=22120RN86G note=Callback for this app's user.
+#73 INTRUSION_THRESHOLD_REACHED 2026-11-27 16:37:18 +0100 sys=3 proto=3 prev=-1 thr=3 callback=true unlocked=true boot=2853 proc=69de16ee model=22120RN86G note=Effective count 3 >= threshold 3 (source: system counter). Notification posted.
+#72 PASSWORD_FAILED 2026-11-27 16:37:18 +0100 sys=3 proto=3 prev=-1 thr=3 callback=true unlocked=true boot=2853 proc=69de16ee model=22120RN86G note=Callback for this app's user.
+#71 PASSWORD_FAILED 2026-11-27 16:37:15 +0100 sys=2 proto=2 prev=-1 thr=3 callback=true unlocked=true boot=2853 proc=69de16ee model=22120RN86G note=Callback for this app's user.
+#70 PASSWORD_FAILED 2026-11-27 16:37:14 +0100 sys=1 proto=1 prev=-1 thr=3 callback=true unlocked=true boot=2853 proc=69de16ee model=22120RN86G note=Callback for this app's user.
+#69 BOOT_COMPLETED 2026-11-27 07:01:01 +0100 sys=-1 proto=-1 prev=-1 thr=-1 callback=true unlocked=true boot=2853 proc=a528e3b4 model=22120RN86G note=Boot broadcast delivered to IntruderSnap.
+#68 BOOT_COMPLETED 2026-11-27 02:53:25 +0100 sys=-1 proto=-1 prev=-1 thr=-1 callback=true unlocked=false boot=2853 proc=77d575e1 model=22120RN86G note=Boot broadcast delivered to IntruderSnap.
+#67 PASSWORD_SUCCEEDED 2026-11-24 15:13:56 +0100 sys=0 proto=8 prev=8 thr=1 callback=true unlocked=true boot=2852 proc=8380607a mod

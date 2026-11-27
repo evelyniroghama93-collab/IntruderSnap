@@ -49,6 +49,8 @@ class CameraFeasibilityService : LifecycleService() {
     private val handler = Handler(Looper.getMainLooper())
     private var lastCameraStateError: String? = null
     private var mode: String = MODE_VISIBLE
+    private var triggerContext: String = ""
+    private var msSinceUiVisible: Long = -1L
 
     private val key: CameraTestKey
         get() = if (mode == MODE_BACKGROUND) CameraTestKey.E_BACKGROUND_AFTER_CALLBACK else CameraTestKey.C_FGS_VISIBLE
@@ -60,6 +62,8 @@ class CameraFeasibilityService : LifecycleService() {
             return START_NOT_STICKY
         }
         mode = intent?.getStringExtra(EXTRA_MODE) ?: MODE_VISIBLE
+        triggerContext = intent?.getStringExtra(EXTRA_TRIGGER_CONTEXT).orEmpty()
+        msSinceUiVisible = intent?.getLongExtra(EXTRA_MS_SINCE_UI_VISIBLE, -1L) ?: -1L
         val background = mode == MODE_BACKGROUND
 
         // 1. Promote to a camera-type foreground service.
@@ -157,8 +161,21 @@ class CameraFeasibilityService : LifecycleService() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun finish(outcome: TestOutcome, detail: String, denial: Boolean) {
+    private fun finish(rawOutcome: TestOutcome, rawDetail: String, denial: Boolean) {
         if (!finished.compareAndSet(false, true)) return
+        var outcome = rawOutcome
+        var detail = rawDetail
+        if (mode == MODE_BACKGROUND) {
+            if (triggerContext.isNotBlank()) detail += " Context at callback: $triggerContext."
+            // Android lets an app start foreground services / use while-in-use permissions for a
+            // few seconds after it leaves the screen. A success inside that window does not prove
+            // true background access, so it is not counted as PASS.
+            if (outcome == TestOutcome.PASS && msSinceUiVisible in 0L until GRACE_WINDOW_MS) {
+                outcome = TestOutcome.INCONCLUSIVE
+                detail += " Not counted as PASS: IntruderSnap was on screen less than ${GRACE_WINDOW_MS / 1000} s " +
+                    "before the callback (Android grace period). Repeat with the app closed and the phone locked for 1+ minute."
+            }
+        }
         handler.removeCallbacksAndMessages(null)
         val label = if (mode == MODE_BACKGROUND) "Test E" else "Test C"
         Log.i(TAG, "$label finished: ${outcome.name}")
@@ -194,6 +211,9 @@ class CameraFeasibilityService : LifecycleService() {
         const val EXTRA_MODE = "mode"
         const val MODE_VISIBLE = "visible"
         const val MODE_BACKGROUND = "background"
+        const val EXTRA_TRIGGER_CONTEXT = "trigger_context"
+        const val EXTRA_MS_SINCE_UI_VISIBLE = "ms_since_ui_visible"
+        private const val GRACE_WINDOW_MS = 30_000L
         private const val TIMEOUT_MS = 15_000L
         private val running = AtomicBoolean(false)
     }

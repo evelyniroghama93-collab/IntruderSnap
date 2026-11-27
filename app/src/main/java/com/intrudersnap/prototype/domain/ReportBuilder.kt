@@ -1,5 +1,6 @@
 package com.intrudersnap.prototype.domain
 
+import android.os.Build
 import com.intrudersnap.prototype.data.AppSettings
 import com.intrudersnap.prototype.data.SecurityEvent
 import com.intrudersnap.prototype.device.DeviceInfo
@@ -13,6 +14,13 @@ object ReportBuilder {
     private fun fmt(ms: Long): String =
         if (ms <= 0L) "-" else SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.US).format(Date(ms))
 
+    private fun looksLikeEmulator(): Boolean {
+        val fp = Build.FINGERPRINT.orEmpty()
+        val hw = Build.HARDWARE.orEmpty()
+        return fp.startsWith("generic") || fp.contains("emulator") || fp.contains("sdk_gphone") ||
+            hw.contains("goldfish") || hw.contains("ranchu") || Build.PRODUCT.orEmpty().contains("sdk")
+    }
+
     fun build(
         device: DeviceInfo,
         adminActive: Boolean,
@@ -23,7 +31,7 @@ object ReportBuilder {
     ): String = buildString {
         appendLine("IntruderSnap - Milestone 1 feasibility report")
         appendLine("Generated: ${fmt(System.currentTimeMillis())}")
-        appendLine("Environment: PHYSICAL DEVICE or EMULATOR -> (tester: state which)")
+        appendLine("Environment: ${if (looksLikeEmulator()) "EMULATOR (auto-detected) - results do not count for acceptance" else "PHYSICAL DEVICE (auto-detected)"}")
         appendLine()
         appendLine("== Device ==")
         appendLine("Manufacturer: ${device.manufacturer} / Brand: ${device.brand}")

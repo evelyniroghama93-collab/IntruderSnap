@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.intrudersnap.prototype.data.EventRepository
 import com.intrudersnap.prototype.data.EventType
+import com.intrudersnap.prototype.data.RuntimeEnvironment
 import com.intrudersnap.prototype.data.SettingsRepository
 import com.intrudersnap.prototype.domain.CameraTestKey
 import com.intrudersnap.prototype.domain.TestOutcome
@@ -42,8 +43,12 @@ object BackgroundCameraExperiment {
             return
         }
 
+        val trigger = RuntimeEnvironment.triggerContext(context)
+        val sinceVisible = RuntimeEnvironment.msSinceUiVisible() ?: -1L
         val intent = Intent(context, CameraFeasibilityService::class.java)
             .putExtra(CameraFeasibilityService.EXTRA_MODE, CameraFeasibilityService.MODE_BACKGROUND)
+            .putExtra(CameraFeasibilityService.EXTRA_TRIGGER_CONTEXT, trigger)
+            .putExtra(CameraFeasibilityService.EXTRA_MS_SINCE_UI_VISIBLE, sinceVisible)
         try {
             ContextCompat.startForegroundService(context, intent)
             val detail = "startForegroundService() accepted from background; waiting for the service to report " +
@@ -53,7 +58,7 @@ object BackgroundCameraExperiment {
             Log.i(TAG, "Background startForegroundService accepted")
         } catch (e: Exception) {
             // On Android 12+ this is normally ForegroundServiceStartNotAllowedException.
-            val detail = "BLOCKED at startForegroundService(): ${e.javaClass.name}: ${e.message}. " +
+            val detail = "BLOCKED at startForegroundService(): ${e.javaClass.name}: ${e.message}. Context: $trigger. " +
                 "Android does not allow this app to start a foreground service from the background " +
                 "after a device-admin broadcast."
             settings.setCameraResult(key, TestOutcome.BLOCKED, detail)

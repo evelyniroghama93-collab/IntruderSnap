@@ -1,6 +1,7 @@
 package com.intrudersnap.prototype.ui
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -45,6 +46,17 @@ class MainActivity : ComponentActivity() {
                 AppRoot()
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        RuntimeEnvironment.uiVisible = true
+    }
+
+    override fun onStop() {
+        RuntimeEnvironment.uiVisible = false
+        RuntimeEnvironment.lastUiStoppedElapsed = SystemClock.elapsedRealtime()
+        super.onStop()
     }
 }
 

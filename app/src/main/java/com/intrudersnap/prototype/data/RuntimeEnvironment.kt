@@ -1,6 +1,7 @@
 package com.intrudersnap.prototype.data
 
 import android.app.ActivityManager
+import android.app.KeyguardManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Build
@@ -27,6 +28,41 @@ object RuntimeEnvironment {
      */
     @Volatile
     var uiCreatedInProcess: Boolean = false
+
+    /** True between MainActivity.onStart and onStop. */
+    @Volatile
+    var uiVisible: Boolean = false
+
+    /** elapsedRealtime when MainActivity last stopped being visible (-1 = never in this process). */
+    @Volatile
+    var lastUiStoppedElapsed: Long = -1L
+
+    /**
+     * Milliseconds since IntruderSnap's screen was last visible in this process:
+     * 0 if visible now, null if it was never shown in this process.
+     */
+    fun msSinceUiVisible(): Long? = when {
+        uiVisible -> 0L
+        lastUiStoppedElapsed < 0 -> null
+        else -> SystemClock.elapsedRealtime() - lastUiStoppedElapsed
+    }
+
+    fun isDeviceLocked(context: Context): Boolean? = try {
+        context.getSystemService(KeyguardManager::class.java).isDeviceLocked
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Context of a background-camera attempt, so the result can be judged correctly. */
+    fun triggerContext(context: Context): String {
+        val since = msSinceUiVisible()
+        val sinceText = when (since) {
+            null -> "app screen never shown in this process"
+            0L -> "app screen VISIBLE"
+            else -> "app screen last visible $since ms earlier"
+        }
+        return "deviceLocked=${isDeviceLocked(context) ?: "unknown"}, $sinceText, processAge=${processAgeMs()} ms"
+    }
 
     /** Settings.Global.BOOT_COUNT increases by one on every boot; -1 if unavailable. */
     fun bootCount(context: Context): Int = try {
