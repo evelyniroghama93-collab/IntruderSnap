@@ -74,7 +74,7 @@ No logcat was captured. The evidence is the in-app report and screenshots. Repre
 
 ## Remaining checks (build 5, short)
 
-1. **Repeat test E under controlled conditions.** Close IntruderSnap, lock the phone, wait **at least 1 minute**, arm nothing new (arm E first, *then* close the app), and enter one wrong PIN. Watch the lock screen for the green camera dot and the "camera experiment" notification (test F for E). Build 5 records whether the device was locked and how long ago the app was on screen.
+1. **Repeat test E under controlled conditions.** Arm test E on the Camera tab, close IntruderSnap (Home, then swipe it from Recents), lock the phone, wait **at least 1 minute**, then enter one wrong PIN. Watch the lock screen for the green camera dot and the "camera experiment" notification (test F for E). Build 5 records whether the device was locked and how long ago the app was on screen.
 2. **Background delivery after an idle kill:** follow TEST_PLAN Test 15. Record the Autostart and Battery saver settings in use.
 3. Capture logcat for one run if a computer is available.
 
