@@ -79,6 +79,39 @@ object RuntimeEnvironment {
     fun processAgeMs(): Long =
         SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()
 
+    data class PowerState(
+        val standbyBucket: String,
+        val standbyBucketRestricted: Boolean?,
+        val backgroundRestricted: Boolean?,
+        val ignoringBatteryOptimizations: Boolean?,
+    )
+
+    /** Power-management state readable through public APIs (own app only). */
+    fun powerState(context: Context): PowerState {
+        val bucket = try {
+            context.getSystemService(UsageStatsManager::class.java).appStandbyBucket
+        } catch (e: Exception) {
+            null
+        }
+        return PowerState(
+            standbyBucket = bucket?.let { bucketName(it) } ?: "unknown",
+            standbyBucketRestricted = bucket?.let { it == UsageStatsManager.STANDBY_BUCKET_RESTRICTED },
+            backgroundRestricted = try {
+                context.getSystemService(ActivityManager::class.java).isBackgroundRestricted
+            } catch (e: Exception) {
+                null
+            },
+            ignoringBatteryOptimizations = try {
+                context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
+            } catch (e: Exception) {
+                null
+            },
+        )
+    }
+
+    /** Wall-clock time of the current boot. */
+    fun lastBootAt(): Long = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+
     /**
      * One-line snapshot of the power-management state that can affect delivery on
      * Xiaomi devices. Uses only public APIs and reads only this app's own state.
@@ -114,7 +147,7 @@ object RuntimeEnvironment {
         UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "WORKING_SET"
         UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "FREQUENT"
         UsageStatsManager.STANDBY_BUCKET_RARE -> "RARE"
-        45 -> "RESTRICTED" // UsageStatsManager.STANDBY_BUCKET_RESTRICTED (API 30)
+        UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "RESTRICTED"
         else -> "OTHER($bucket)"
     }
 }

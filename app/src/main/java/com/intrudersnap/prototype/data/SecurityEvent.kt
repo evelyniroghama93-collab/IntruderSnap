@@ -11,6 +11,12 @@ enum class EventType(val label: String) {
     ADMIN_DISABLED("Device admin disabled"),
     BOOT_COMPLETED("Boot broadcast received"),
     CAMERA_TEST("Camera feasibility test"),
+    RECONCILIATION("Reconciliation with Android's counter"),
+    ADMIN_LOST("Device admin found inactive"),
+    HISTORY_CLEARED("History cleared by owner"),
+    RETENTION_PURGE("Old records deleted (retention)"),
+    SETTINGS_CHANGED("Setting changed by owner"),
+    STORAGE_NOTICE("Storage notice"),
     UNKNOWN("Unknown");
 
     val isLockScreenCallback: Boolean
@@ -38,6 +44,10 @@ enum class EventType(val label: String) {
  * @property processAgeMs how long the writing process had been alive (small = cold start).
  * @property backgroundState power-management snapshot (standby bucket, restrictions).
  *   Blank for records written by builds before this field existed.
+ * @property source what produced the record (e.g. "DeviceAdminReceiver.onPasswordFailed",
+ *   "Reconciler(app-open)", "BootReceiver", "Owner").
+ * @property classification incident classification for failures (IncidentTracker.Classification name).
+ * @property incidentCount failures in the current incident after reconciliation (-1 = n/a).
  */
 data class SecurityEvent(
     val id: Long,
@@ -58,6 +68,9 @@ data class SecurityEvent(
     val uiInProcess: Boolean = true,
     val processAgeMs: Long = -1L,
     val backgroundState: String = "",
+    val source: String = "",
+    val classification: String = "",
+    val incidentCount: Int = -1,
 ) {
     /** True when the background diagnostics were recorded (newer builds only). */
     val hasDiagnostics: Boolean get() = backgroundState.isNotBlank()
@@ -81,6 +94,9 @@ data class SecurityEvent(
         put("uiInProcess", uiInProcess)
         put("processAgeMs", processAgeMs)
         put("backgroundState", backgroundState)
+        put("source", source)
+        put("classification", classification)
+        put("incidentCount", incidentCount)
     }
 
     companion object {
@@ -107,6 +123,9 @@ data class SecurityEvent(
             uiInProcess = o.optBoolean("uiInProcess", true),
             processAgeMs = o.optLong("processAgeMs", -1L),
             backgroundState = o.optString("backgroundState", ""),
+            source = o.optString("source", ""),
+            classification = o.optString("classification", ""),
+            incidentCount = o.optInt("incidentCount", -1),
         )
     }
 }

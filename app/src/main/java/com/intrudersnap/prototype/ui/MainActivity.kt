@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,18 +22,24 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.intrudersnap.prototype.auth.OwnerSession
 import com.intrudersnap.prototype.data.RuntimeEnvironment
-import com.intrudersnap.prototype.ui.camera.CameraTestScreen
-import com.intrudersnap.prototype.ui.dashboard.DashboardScreen
+import com.intrudersnap.prototype.data.SettingsRepository
+import com.intrudersnap.prototype.ui.health.HealthScreen
 import com.intrudersnap.prototype.ui.history.HistoryScreen
-import com.intrudersnap.prototype.ui.results.ResultsScreen
+import com.intrudersnap.prototype.ui.labs.LabsScreen
 import com.intrudersnap.prototype.ui.settings.SettingsScreen
+import com.intrudersnap.prototype.ui.setup.SetupScreen
 import com.intrudersnap.prototype.ui.theme.IntruderSnapTheme
 
 class MainActivity : ComponentActivity() {
@@ -56,27 +62,38 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         RuntimeEnvironment.uiVisible = false
         RuntimeEnvironment.lastUiStoppedElapsed = SystemClock.elapsedRealtime()
+        // Protected screens lock again as soon as IntruderSnap leaves the screen.
+        OwnerSession.end()
         super.onStop()
     }
 }
 
-private enum class Tab(val label: String, val title: String, val icon: ImageVector) {
-    DASHBOARD("Dashboard", "IntruderSnap · Test dashboard", Icons.Filled.Home),
-    HISTORY("History", "Security event history", Icons.AutoMirrored.Filled.List),
-    THRESHOLD("Threshold", "Threshold & device setup", Icons.Filled.Settings),
-    CAMERA("Camera", "Camera feasibility (A–G)", Icons.Filled.Face),
-    RESULTS("Results", "Acceptance results", Icons.Filled.CheckCircle),
+private enum class AppTab(val label: String, val title: String, val icon: ImageVector) {
+    HEALTH("Health", "Monitoring health", Icons.Filled.Home),
+    HISTORY("History", "Security history", Icons.AutoMirrored.Filled.List),
+    SETUP("Setup", "Guided setup", Icons.Filled.CheckCircle),
+    SETTINGS("Settings", "Settings", Icons.Filled.Settings),
+    LABS("Labs", "Experimental Labs", Icons.Filled.Warning),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppRoot() {
-    var selected by rememberSaveable { mutableStateOf(Tab.DASHBOARD) }
+    val context = LocalContext.current
+    val settingsRepo = remember { SettingsRepository.get(context) }
+    val settings by settingsRepo.settings.collectAsStateWithLifecycle()
+    var selected by rememberSaveable { mutableStateOf(AppTab.HEALTH) }
+
+    val tabs = AppTab.entries.filter { it != AppTab.LABS || settings.experimentalToolsEnabled }
+    LaunchedEffect(settings.experimentalToolsEnabled) {
+        if (!settings.experimentalToolsEnabled && selected == AppTab.LABS) selected = AppTab.SETTINGS
+    }
+
     Scaffold(
         topBar = { CenterAlignedTopAppBar(title = { Text(selected.title) }) },
         bottomBar = {
             NavigationBar {
-                Tab.entries.forEach { tab ->
+                tabs.forEach { tab ->
                     NavigationBarItem(
                         selected = tab == selected,
                         onClick = { selected = tab },
@@ -89,11 +106,11 @@ private fun AppRoot() {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (selected) {
-                Tab.DASHBOARD -> DashboardScreen()
-                Tab.HISTORY -> HistoryScreen()
-                Tab.THRESHOLD -> SettingsScreen()
-                Tab.CAMERA -> CameraTestScreen()
-                Tab.RESULTS -> ResultsScreen()
+                AppTab.HEALTH -> HealthScreen()
+                AppTab.HISTORY -> HistoryScreen()
+                AppTab.SETUP -> SetupScreen()
+                AppTab.SETTINGS -> SettingsScreen()
+                AppTab.LABS -> LabsScreen()
             }
         }
     }

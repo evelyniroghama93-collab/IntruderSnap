@@ -1,19 +1,17 @@
 package com.intrudersnap.prototype.ui.settings
 
 import android.app.Application
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.intrudersnap.prototype.admin.AdminController
+import com.intrudersnap.prototype.auth.OwnerSession
 import com.intrudersnap.prototype.data.AppSettings
+import com.intrudersnap.prototype.data.EventRepository
+import com.intrudersnap.prototype.data.EventType
 import com.intrudersnap.prototype.data.SettingsRepository
 import com.intrudersnap.prototype.data.ThresholdMode
-import com.intrudersnap.prototype.device.DeviceInfo
-import com.intrudersnap.prototype.device.DeviceInfoProvider
+import com.intrudersnap.prototype.data.security.CryptoBox
+import com.intrudersnap.prototype.domain.RetentionPolicy
 import com.intrudersnap.prototype.domain.ThresholdPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,23 +19,32 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class StorageInfo(val recordCount: Int = 0, val keystoreUsable: Boolean? = null, val adminActive: Boolean = false)
+
+/** Every change requires an active owner session and is itself recorded in the history. */
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SettingsRepository.get(app)
+    private val events = EventRepository.get(app)
     val settings: StateFlow<AppSettings> = repo.settings
 
-    private val _device = MutableStateFlow<DeviceInfo?>(null)
-    val device: StateFlow<DeviceInfo?> = _device.asStateFlow()
+    private val _storage = MutableStateFlow(StorageInfo())
+    val storage: StateFlow<StorageInfo> = _storage.asStateFlow()
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             repo.reload()
-            _device.value = DeviceInfoProvider.get()
+            _storage.value = StorageInfo(
+                recordCount = events.events.value.size,
+                keystoreUsable = CryptoBox.isUsable(),
+                adminActive = AdminController.isAdminActive(getApplication()),
+            )
         }
     }
 
-    /** @return null on success, or a validation error message. */
+    /** @return null on success, otherwise an error message. */
     fun saveThreshold(mode: ThresholdMode, customText: String): String? {
+        if (OwnerSession.proof() == null) return "Session expired. Unlock again."
         val custom = if (mode == ThresholdMode.CUSTOM) {
             val value = customText.trim().toIntOrNull()
             if (value == null || !ThresholdPolicy.isValidCustomThreshold(value)) {
@@ -47,31 +54,44 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             null
         }
-        viewModelScope.launch(Dispatchers.IO) { repo.setThreshold(mode, custom) }
+        val before = repo.current.threshold
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.setThreshold(mode, custom)
+            audit("Threshold changed from $before to ${repo.current.threshold}.")
+        }
         return null
     }
 
-    // ---- Xiaomi / Android settings shortcuts. Each falls back to App info if unavailable. ----
-
-    fun appDetailsIntent(context: Context): Intent =
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-
-    fun batteryOptimizationIntent(): Intent =
-        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-
-    fun notificationSettingsIntent(context: Context): Intent =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        } else {
-            appDetailsIntent(context)
+    fun saveRetention(days: Int): String? {
+        if (OwnerSession.proof() == null) return "Session expired. Unlock again."
+        val before = repo.current.retentionDays
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.setRetentionDays(days)
+            audit("Retention changed from $before to ${RetentionPolicy.sanitize(days)} days.")
         }
+        return null
+    }
 
-    /** MIUI / HyperOS Autostart manager (Security app). Not a public API - may not exist. */
-    fun xiaomiAutostartIntent(): Intent =
-        Intent().setComponent(
-            ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
-        )
+    fun setExperimental(enabled: Boolean): String? {
+        if (OwnerSession.proof() == null) return "Session expired. Unlock again."
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.setExperimentalToolsEnabled(enabled)
+            audit("Experimental Labs tools ${if (enabled) "enabled" else "disabled"}.")
+        }
+        return null
+    }
 
-    fun deviceAdminSettingsIntent(): Intent =
-        Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.DeviceAdminSettings"))
+    /** Destructive: requires an authentication within the last minute. */
+    fun deactivateAdmin(): String? {
+        if (OwnerSession.freshProof() == null) return "Confirm it's you again to deactivate."
+        viewModelScope.launch(Dispatchers.IO) {
+            audit("Owner deactivated the device administrator from IntruderSnap.")
+            AdminController.deactivate(getApplication())
+        }
+        return null
+    }
+
+    private fun audit(text: String) {
+        events.record(type = EventType.SETTINGS_CHANGED, source = "Owner", note = text)
+    }
 }

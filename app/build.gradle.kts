@@ -10,12 +10,18 @@ android {
 
     defaultConfig {
         applicationId = "com.intrudersnap.prototype"
-        // The 3-argument DeviceAdminReceiver callbacks were added in API 26.
-        minSdk = 26
+        // Milestone 2: API 30 is required for the platform BiometricPrompt with
+        // BIOMETRIC_STRONG | DEVICE_CREDENTIAL (owner authentication without extra libraries).
+        minSdk = 30
         // Milestone 1 targets Android 14 (API 34) on a Xiaomi / Redmi test device.
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0-spike"
+        versionCode = 2
+        versionName = "0.2.0-m2"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     buildTypes {
@@ -69,4 +75,8 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraX")
 
     testImplementation("junit:junit:4.13.2")
+
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }

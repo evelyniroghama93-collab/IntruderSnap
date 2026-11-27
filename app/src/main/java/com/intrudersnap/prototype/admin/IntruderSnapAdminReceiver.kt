@@ -9,6 +9,8 @@ import android.util.Log
 import com.intrudersnap.prototype.R
 import com.intrudersnap.prototype.data.EventRepository
 import com.intrudersnap.prototype.data.EventType
+import com.intrudersnap.prototype.data.SettingsRepository
+import com.intrudersnap.prototype.notify.Notifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,10 +53,12 @@ class IntruderSnapAdminReceiver : DeviceAdminReceiver() {
     override fun onEnabled(context: Context, intent: Intent) {
         val appContext = context.applicationContext
         runAsync {
+            SettingsRepository.get(appContext).setAdminState(true, System.currentTimeMillis())
             EventRepository.get(appContext).record(
                 type = EventType.ADMIN_ENABLED,
                 callbackReceived = true,
                 callbackName = "onEnabled(Context, Intent)",
+                source = "DeviceAdminReceiver.onEnabled",
                 note = "Device administrator activated through the system screen (watch-login only).",
             )
         }
@@ -67,6 +71,8 @@ class IntruderSnapAdminReceiver : DeviceAdminReceiver() {
                 type = EventType.ADMIN_DISABLE_REQUESTED,
                 callbackReceived = true,
                 callbackName = "onDisableRequested(Context, Intent)",
+                source = "DeviceAdminReceiver.onDisableRequested",
+                note = "Someone opened the system screen to deactivate IntruderSnap's device administrator.",
             )
         }
         return context.getString(R.string.device_admin_disable_warning)
@@ -75,11 +81,14 @@ class IntruderSnapAdminReceiver : DeviceAdminReceiver() {
     override fun onDisabled(context: Context, intent: Intent) {
         val appContext = context.applicationContext
         runAsync {
+            SettingsRepository.get(appContext).setAdminState(false, System.currentTimeMillis())
+            val status = Notifier.showAdminLost(appContext, detectedBy = "onDisabled callback")
             EventRepository.get(appContext).record(
                 type = EventType.ADMIN_DISABLED,
                 callbackReceived = true,
                 callbackName = "onDisabled(Context, Intent)",
-                note = "Monitoring stopped. The app can now be uninstalled.",
+                source = "DeviceAdminReceiver.onDisabled",
+                note = "Monitoring stopped. The app can now be uninstalled. Owner alert: $status.",
             )
         }
     }

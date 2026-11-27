@@ -23,14 +23,21 @@ object Notifier {
 
     const val CHANNEL_ALERTS = "intrusion_alerts"
     const val CHANNEL_CAMERA = "camera_feasibility"
+    const val CHANNEL_STATUS = "monitoring_status"
     const val ID_INTRUSION = 1001
     const val ID_CAMERA_SERVICE = 1002
+    const val ID_ADMIN_LOST = 1003
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ALERTS, "Intrusion alerts", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "Shown when the failed-unlock threshold is reached."
+            }
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_STATUS, "Monitoring status", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Shown when lock-screen monitoring stops, e.g. device administrator disabled."
             }
         )
         manager.createNotificationChannel(
@@ -82,6 +89,36 @@ object Notifier {
             .build()
         return try {
             NotificationManagerCompat.from(context).notify(ID_INTRUSION, notification)
+            "Notification posted"
+        } catch (e: Exception) {
+            "Notification NOT posted: ${e.javaClass.simpleName}"
+        }
+    }
+
+    /**
+     * Tells the owner that monitoring stopped. Posted when IntruderSnap next gets to run
+     * (onDisabled, boot, periodic job or app open) - Android/HyperOS decide when that is.
+     */
+    @SuppressLint("MissingPermission") // checked by canPostNotifications()
+    fun showAdminLost(context: Context, detectedBy: String): String {
+        if (!canPostNotifications(context)) return "Notification NOT posted: notifications not allowed"
+        val notification = NotificationCompat.Builder(context, CHANNEL_STATUS)
+            .setSmallIcon(R.drawable.ic_stat_shield)
+            .setContentTitle("IntruderSnap monitoring stopped")
+            .setContentText("Device administrator access is off. Failed unlock attempts are no longer recorded.")
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "Device administrator access is off, so failed unlock attempts are no longer recorded. " +
+                        "If you did not turn it off, open IntruderSnap to review and re-enable it. (Detected by: $detectedBy)"
+                )
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setContentIntent(openAppIntent(context))
+            .setAutoCancel(true)
+            .build()
+        return try {
+            NotificationManagerCompat.from(context).notify(ID_ADMIN_LOST, notification)
             "Notification posted"
         } catch (e: Exception) {
             "Notification NOT posted: ${e.javaClass.simpleName}"

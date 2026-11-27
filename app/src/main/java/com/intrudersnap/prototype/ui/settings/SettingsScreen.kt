@@ -1,8 +1,5 @@
 package com.intrudersnap.prototype.ui.settings
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,12 +11,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,24 +36,34 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.intrudersnap.prototype.data.ThresholdMode
+import com.intrudersnap.prototype.domain.RetentionPolicy
 import com.intrudersnap.prototype.ui.components.InfoRow
+import com.intrudersnap.prototype.ui.components.OwnerGate
 import com.intrudersnap.prototype.ui.components.SectionCard
+import com.intrudersnap.prototype.ui.components.requestOwnerAuth
 
 @Composable
 fun SettingsScreen(vm: SettingsViewModel = viewModel()) {
+    OwnerGate(what = "Settings") { SettingsContent(vm) }
+}
+
+@Composable
+private fun SettingsContent(vm: SettingsViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val device by vm.device.collectAsStateWithLifecycle()
+    val storage by vm.storage.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var mode by remember { mutableStateOf(settings.thresholdMode) }
     var customText by remember { mutableStateOf(settings.threshold.toString()) }
     var error by remember { mutableStateOf<String?>(null) }
+    var confirmDeactivate by remember { mutableStateOf(false) }
+
+    fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 
     LifecycleResumeEffect(Unit) {
         vm.refresh()
         onPauseOrDispose { }
     }
-    // Keep the form in sync when the stored value loads or changes.
     LaunchedEffect(settings.thresholdMode, settings.threshold) {
         mode = settings.thresholdMode
         if (settings.thresholdMode == ThresholdMode.CUSTOM) customText = settings.threshold.toString()
@@ -67,7 +77,7 @@ fun SettingsScreen(vm: SettingsViewModel = viewModel()) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SectionCard("Failed-attempt threshold") {
-            InfoRow("Current threshold", "${settings.threshold} (${settings.thresholdMode.label})")
+            InfoRow("Current", "${settings.threshold} (${settings.thresholdMode.label})")
             ThresholdMode.entries.forEach { option ->
                 Row(
                     Modifier
@@ -92,80 +102,96 @@ fun SettingsScreen(vm: SettingsViewModel = viewModel()) {
                 )
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-            Button(
-                onClick = {
-                    error = vm.saveThreshold(mode, customText)
-                    if (error == null) Toast.makeText(context, "Threshold saved", Toast.LENGTH_SHORT).show()
+            Button(onClick = {
+                error = vm.saveThreshold(mode, customText)
+                if (error == null) toast("Threshold saved")
+            }, modifier = Modifier.fillMaxWidth()) { Text("Save threshold") }
+            Text(
+                "Creates an IntruderSnap alert only. It never changes Android's own lockout or wipe behaviour.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        SectionCard("Record retention") {
+            Text("Security records older than this are deleted automatically (securely, on this device).", style = MaterialTheme.typography.bodySmall)
+            RetentionPolicy.ALLOWED_DAYS.forEach { days ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(selected = settings.retentionDays == days, onClick = {
+                            vm.saveRetention(days)?.let { toast(it) }
+                        }, role = Role.RadioButton)
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = settings.retentionDays == days, onClick = null)
+                    Text("$days days", modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
+
+        SectionCard("Storage & privacy") {
+            InfoRow("Records stored", storage.recordCount.toString())
+            InfoRow(
+                "Encryption",
+                when (storage.keystoreUsable) {
+                    true -> "AES-256-GCM, key in Android Keystore"
+                    false -> "Keystore unavailable - records are flagged and re-encrypted later"
+                    null -> "Checking…"
                 },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Save threshold") }
+            )
+            InfoRow("Network access", "None - IntruderSnap has no internet permission")
             Text(
-                "Use 3 for the first test. The threshold only creates an IntruderSnap alert; it never changes " +
-                    "Android's own lockout or wipe behaviour. Keep your test count well below any lockout or " +
-                    "wipe limit configured on the phone.",
+                "Records cannot be protected against a factory reset, root access or other privileged system access.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        SectionCard("Xiaomi / Redmi setup (MIUI & HyperOS)") {
-            val isXiaomi = device?.isXiaomiFamily == true
+        SectionCard("Experimental Labs") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Show experimental feasibility tools (camera tests, Milestone 1 results)", modifier = Modifier.weight(1f))
+                Switch(checked = settings.experimentalToolsEnabled, onCheckedChange = { v -> vm.setExperimental(v)?.let { toast(it) } })
+            }
             Text(
-                if (isXiaomi) "Xiaomi-family device detected: ${device?.romLabel}" else "These steps are for Xiaomi / Redmi / POCO devices.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                "Xiaomi's battery and autostart management can stop or delay apps that are not open. Device admin " +
-                    "broadcasts are sent by the system, but whether MIUI/HyperOS delivers them to a stopped app has to " +
-                    "be tested. The settings below may improve delivery; they do NOT guarantee it. They do not weaken " +
-                    "any Android security protection.",
+                "Background camera capture is experimental and is not an IntruderSnap feature. It is not enabled for normal use.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            GuideStep("1. Autostart: allow IntruderSnap to start automatically (Security app › Permissions › Autostart).")
-            ShortcutButton("Open Autostart settings") { open(context, vm.xiaomiAutostartIntent(), vm.appDetailsIntent(context)) }
-            GuideStep("2. Battery saver: App info › Battery saver › No restrictions. Record which option you chose in the test report.")
-            ShortcutButton("Open App info") { open(context, vm.appDetailsIntent(context), null) }
-            ShortcutButton("Open battery optimization list") { open(context, vm.batteryOptimizationIntent(), vm.appDetailsIntent(context)) }
-            GuideStep("3. Notifications: allow notifications and lock-screen notifications for “Intrusion alerts”.")
-            ShortcutButton("Open notification settings") { open(context, vm.notificationSettingsIntent(context), vm.appDetailsIntent(context)) }
-            GuideStep("4. Device admin apps: Settings › Passwords & security › Privacy › Special app access › Device admin apps (path varies by version).")
-            ShortcutButton("Open Device admin apps") { open(context, vm.deviceAdminSettingsIntent(), null) }
-            GuideStep("5. Optional: lock IntruderSnap in Recents (open Recents, long-press the app card, tap the lock icon) so MIUI's memory cleaner skips it.")
-            GuideStep("To uninstall: deactivate the device administrator first (Dashboard › Deactivate). Android blocks uninstalling an active admin.")
+        }
+
+        SectionCard("Device administrator") {
+            InfoRow("Status", if (storage.adminActive) "Active" else "Inactive")
+            if (storage.adminActive) {
+                OutlinedButton(onClick = { confirmDeactivate = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Deactivate (stops monitoring; required before uninstalling)")
+                }
+            }
+            Text(
+                "Deactivation through Android's own Settings cannot be blocked by any app. If it happens, IntruderSnap " +
+                    "records it and alerts you when it next gets a chance to run.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
-}
 
-@Composable
-private fun GuideStep(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium)
-}
-
-@Composable
-private fun ShortcutButton(label: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label) }
-}
-
-private fun open(context: Context, intent: Intent, fallback: Intent?) {
-    val flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    try {
-        context.startActivity(intent.addFlags(flags))
-    } catch (e: ActivityNotFoundException) {
-        openFallback(context, fallback)
-    } catch (e: SecurityException) {
-        openFallback(context, fallback)
-    }
-}
-
-private fun openFallback(context: Context, fallback: Intent?) {
-    if (fallback == null) {
-        Toast.makeText(context, "This settings screen is not available on this device. Open it manually.", Toast.LENGTH_LONG).show()
-        return
-    }
-    try {
-        context.startActivity(fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (e: Exception) {
-        Toast.makeText(context, "Settings screen not available on this device.", Toast.LENGTH_LONG).show()
+    if (confirmDeactivate) {
+        AlertDialog(
+            onDismissRequest = { confirmDeactivate = false },
+            title = { Text("Deactivate device administrator?") },
+            text = { Text("Lock-screen monitoring will stop. You will be asked to confirm it's you.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeactivate = false
+                    requestOwnerAuth(context, "Deactivate monitoring", "Confirm it's you") { ok, msg ->
+                        if (!ok) toast(msg ?: "Authentication failed") else vm.deactivateAdmin()?.let { toast(it) }
+                        vm.refresh()
+                    }
+                }) { Text("Continue") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDeactivate = false }) { Text("Cancel") } },
+        )
     }
 }

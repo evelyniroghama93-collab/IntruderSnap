@@ -3,19 +3,22 @@ package com.intrudersnap.prototype.boot
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.intrudersnap.prototype.data.EventRepository
 import com.intrudersnap.prototype.data.EventType
+import com.intrudersnap.prototype.health.HealthCheckJobService
+import com.intrudersnap.prototype.health.MonitoringChecks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Records that a boot broadcast reached the app. It does not start anything.
- *
- * Purpose: on Xiaomi devices, Autostart restrictions can stop boot broadcasts from being
- * delivered. Seeing (or not seeing) these markers helps interpret Test 14 (reboot).
- * Device admin callbacks are delivered independently of this receiver.
+ * Boot handling:
+ *  - records a boot marker (diagnoses Xiaomi Autostart behaviour);
+ *  - checks device-admin status and reconciles with Android's counter;
+ *  - makes sure the periodic health check is scheduled.
+ * Device-admin lock-screen callbacks are delivered independently of this receiver.
  */
 class BootReceiver : BroadcastReceiver() {
 
@@ -26,12 +29,19 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         scope.launch {
             try {
+                val name = action.substringAfterLast('.')
                 EventRepository.get(appContext).record(
                     type = EventType.BOOT_COMPLETED,
                     callbackReceived = true,
-                    callbackName = action.substringAfterLast('.'),
+                    callbackName = name,
+                    source = "BootReceiver",
                     note = "Boot broadcast delivered to IntruderSnap.",
                 )
+                MonitoringChecks.checkAdminStatus(appContext, name)
+                MonitoringChecks.reconcile(appContext, name)
+                HealthCheckJobService.schedule(appContext)
+            } catch (e: Exception) {
+                Log.e("IntruderSnap/Boot", "Boot handling failed", e)
             } finally {
                 pending.finish()
             }
