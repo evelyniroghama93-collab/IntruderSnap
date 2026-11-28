@@ -110,7 +110,7 @@ The feasibility branch stays separate from `main` until these results are review
 # Milestone 2 — Reliable Monitoring Core (branch `milestone-2-monitoring-core`)
 
 **Build:** debug-build-11 (commit a29da44), the first build signed with the fixed test key. CI build, 38 unit tests, 11 emulator integration tests and the no-INTERNET check pass; none of that is a device result.
-**Installed on the Redmi 12C on 2026-11-28** after a one-time uninstall (builds ≤ 10 used a different key each). Device evidence: `docs/evidence/2026-11-28/m2-health-verified-intrusion-152457.png` and `m2-1558-1.png` … `m2-1558-6.png` (Labs, History, Health at 15:58) and `m2-1622-1.png` … `m2-1622-10.png` (run at 16:21-16:22).
+**Installed on the Redmi 12C on 2026-11-28** after a one-time uninstall (builds ≤ 10 used a different key each). Device evidence: `docs/evidence/2026-11-28/m2-health-verified-intrusion-152457.png` and `m2-1558-1.png` … `m2-1558-6.png` (Labs, History, Health at 15:58) and `m2-1622-1.png` … `m2-1622-12.png` (run at 16:21-16:22).
 
 | # | Physical-device test | Result | Observation |
 |---|---|---|---|
@@ -129,4 +129,4 @@ The feasibility branch stays separate from `main` until these results are review
 | M2-11 | Health confidence states | **PASS (Verified state)** | "Verified" with the correct reason after closed-app callbacks. Last reboot 14:20:10, boot count 2855, last admin-status check 15:58:12 were all shown. Permission-required state (after deactivation) not yet shown. |
 | M2-12 | Retention setting | NOT TESTED | |
 | M2-13 | Labs hidden by default | **PASS** | After install the tabs were Health · History · Setup · Settings (screenshot 15:24). Enabling experimental tools (audit record #14) added the Labs tab; its contents were shown only in an unlocked session. |
-| M2-14 | Camera Privacy Dashboard / lock-screen notification (experimental) | NOT TESTED | Related Labs observation (#22, 16:21:58): test E captured a frame from the background with deviceLocked=true, but the app had been on screen 12.5 s earlier, so the grace-period rule correctly recorded it as **INCONCLUSIVE**, not PASS. |
+| M2-14 | Camera Privacy Dashboard / lock-screen notification (experimental) | NOT TESTED | Related Labs observation (#22, 16:21:58): test E captured a frame from the background with deviceLocked=true, but the app had been on screen 12.5 s earlier, so the grace-period rule correctly recorded it as **INCONCLUSIVE**, not PASS (shown as NOT TESTED on the M1-results card). The arm switch turned itself off after the attempt (one-shot confirmed). |
