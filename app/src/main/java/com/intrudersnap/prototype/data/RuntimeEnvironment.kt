@@ -143,6 +143,9 @@ object RuntimeEnvironment {
     }
 
     private fun bucketName(bucket: Int): String = when (bucket) {
+        // 5 = STANDBY_BUCKET_EXEMPTED (hidden constant). Android puts apps here that are exempt
+        // from app-standby limits, e.g. an active device administrator.
+        5 -> "EXEMPTED"
         UsageStatsManager.STANDBY_BUCKET_ACTIVE -> "ACTIVE"
         UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "WORKING_SET"
         UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "FREQUENT"
