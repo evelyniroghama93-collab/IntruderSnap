@@ -32,29 +32,39 @@ class IncidentTrackerTest {
     }
 
     @Test
-    fun duplicateDeliveryIsNotCounted() {
+    fun stalledCounterIsDelayedDeliveryAndStillCounted() {
         val d = run(0L to 1, 1L to 1, 2L to 2)
-        assertEquals(Classification.DUPLICATE_SUSPECT, d[1].classification)
-        assertEquals(1, d[1].incidentCount)
-        assertFalse(d[1].trigger)
-        assertEquals(2, d[2].incidentCount)
-        assertEquals(2, d[2].state.appCount)
+        assertEquals(Classification.DELAYED_DELIVERY, d[1].classification)
+        assertEquals(2, d[1].incidentCount)
+        assertEquals(3, d[2].incidentCount)
+        assertTrue(d[2].trigger)
     }
 
     @Test
-    fun delayedDuplicateLaterInIncidentIsStillDuplicate() {
-        val d = run(0L to 1, 2L to 2, 60L to 2)
-        assertEquals(Classification.DUPLICATE_SUSPECT, d[2].classification)
-        assertEquals(2, d[2].incidentCount)
-    }
-
-    @Test
-    fun missedCallbacksAreReconciledAndCanTrigger() {
+    fun counterAheadIsFollowedAndCanTrigger() {
         val d = run(0L to 1, 5L to 3)
-        assertEquals(Classification.MISSED_CALLBACKS, d[1].classification)
+        assertEquals(Classification.COUNTER_AHEAD, d[1].classification)
         assertEquals(1, d[1].missedCallbacks)
         assertEquals(3, d[1].incidentCount)
         assertTrue(d[1].trigger)
+    }
+
+    /**
+     * Replays the Redmi 12C run of 2026-11-28 20:35: 3 failures -> alert, fingerprint unlock
+     * (Android's counter stays 3), 16+ minutes later 3 more failures. The first broadcast of
+     * the second group was processed ~5 s late (cold start), when Android already counted 5.
+     * Observed with the old rule: incident counts 1, 1 (dropped as "duplicate"), 2 -> no alert.
+     * Required: the second alert fires on the third failure.
+     */
+    @Test
+    fun coldStartDelayAfterBiometricGapStillAlerts() {
+        val first = run(0L to 1, 2L to 2, 4L to 3)
+        assertTrue(first[2].trigger)
+        val second = run(1000L to 5, 1001L to 5, 1045L to 6, start = first.last().state)
+        assertTrue(second[0].newIncident)
+        assertEquals(Classification.DELAYED_DELIVERY, second[1].classification)
+        assertEquals(listOf(2, 2, 3), second.map { it.incidentCount })
+        assertEquals(listOf(false, false, true), second.map { it.trigger })
     }
 
     @Test

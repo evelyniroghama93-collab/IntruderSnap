@@ -54,10 +54,10 @@ object LoginEventProcessor {
             append(userNote(user))
             if (decision.newIncident) append(" New incident.")
             if (decision.missedCallbacks > 0) {
-                append(" Android counted ${decision.missedCallbacks} failed attempt(s) that were not delivered as callbacks; reconciled.")
+                append(" Android has counted ${decision.missedCallbacks} more failed attempt(s) than IntruderSnap has received so far (still arriving or not delivered); the incident count follows Android.")
             }
-            if (decision.classification == IncidentTracker.Classification.DUPLICATE_SUSPECT) {
-                append(" Same system count as the previous failure: treated as a duplicate/delayed delivery and not counted again.")
+            if (decision.classification == IncidentTracker.Classification.DELAYED_DELIVERY) {
+                append(" Android's counter had not advanced: this callback was processed after a later failure. Counted.")
             }
             if (decision.classification == IncidentTracker.Classification.COUNTER_RESET_UNSEEN) {
                 append(" Android's counter went down without a success callback; a new incident was started.")

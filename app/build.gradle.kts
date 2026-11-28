@@ -15,8 +15,10 @@ android {
         minSdk = 30
         // Milestone 1 targets Android 14 (API 34) on a Xiaomi / Redmi test device.
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2.0-m2"
+        // Each CI build gets a higher versionCode so phones always accept it as an update.
+        val ciBuild = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        versionCode = ciBuild ?: 2
+        versionName = "0.2.${ciBuild ?: 0}-m2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
