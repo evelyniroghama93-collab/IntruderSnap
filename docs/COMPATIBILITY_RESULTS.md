@@ -110,23 +110,23 @@ The feasibility branch stays separate from `main` until these results are review
 # Milestone 2 — Reliable Monitoring Core (branch `milestone-2-monitoring-core`)
 
 **Build:** debug-build-11 (commit a29da44), the first build signed with the fixed test key. CI build, 38 unit tests, 11 emulator integration tests and the no-INTERNET check pass; none of that is a device result.
-**Installed on the Redmi 12C on 2026-11-28** after a one-time uninstall (builds ≤ 10 used a different key each). Device evidence: `docs/evidence/2026-11-28/m2-health-verified-intrusion-152457.png` and `m2-1558-1.png` … `m2-1558-6.png` (Labs, History, Health at 15:58).
+**Installed on the Redmi 12C on 2026-11-28** after a one-time uninstall (builds ≤ 10 used a different key each). Device evidence: `docs/evidence/2026-11-28/m2-health-verified-intrusion-152457.png` and `m2-1558-1.png` … `m2-1558-6.png` (Labs, History, Health at 15:58) and `m2-1622-1.png` … `m2-1622-10.png` (run at 16:21-16:22).
 
 | # | Physical-device test | Result | Observation |
 |---|---|---|---|
 | M2-0 | Upgrade and migration of Milestone 1 history | NOT TESTED | Not testable after the one-time uninstall (no Milestone 1 history left to migrate). |
 | M2-1 | Owner authentication (biometric and PIN fallback, auto-lock) | **PASS (unlock part)** | History, Settings and Labs were opened after authenticating (screenshots at 15:58). Cancel → stays locked, the PIN fallback, and re-lock after leaving the app are not yet shown. |
 | M2-2 | Protected settings + audit records | **PASS (audit part)** | History #14, 15:57:09, *Setting changed by owner*, source Owner: "Experimental Labs tools enabled." Threshold change not yet shown. |
-| M2-3 | Protected deletion + "history cleared" record | NOT TESTED | |
-| M2-4 | Callback, counter, threshold with the new incident logic | **PASS (threshold + success parts)** | Intrusion at 15:24:57, "Failed attempts in incident: 3 (threshold 3)", source `onPasswordFailed`. History #13 at 15:55:58: *Password succeeded*, source `DeviceAdminReceiver.onPasswordSucceeded`, Android count 0, previous failed attempts 3. Labs: 8 failed callbacks, system counter read in 8/8 (max 5). Not yet shown: individual failed records with counts 1-2-3 and classification. |
+| M2-3 | Protected deletion + "history cleared" record | **PASS** | History #17, 16:20:18, *History cleared by owner*, source Owner: "The owner cleared 1 record(s) after authenticating." The audit record stays after clearing. |
+| M2-4 | Callback, counter, threshold with the new incident logic | **PASS** | Run 16:21:56-16:22:01: first failure "Android count 1 · incident 1 · Normal · New incident"; #23 count 3 · incident 3 · Normal; #24 *Intrusion threshold reached* at incident 3 (threshold 3), notification posted; #25 count 4 · incident 4 · Normal, with **no second intrusion** (once per incident). Success callback: #13 at 15:55:58, previous failed attempts 3, Android count 0. |
 | M2-5 | New incident after a biometric unlock + 15-min gap | NOT TESTED | |
 | M2-6a | Closed-app delivery (app closed, short interval) | **PASS** | Labs › background delivery: "3 failed callback(s) delivered while IntruderSnap was not open (3 in a process started within 10 s of the callback). Latest: process age 2469 ms, standbyBucket 5 (EXEMPTED), backgroundRestricted=false, ignoringBatteryOptimizations=true." History #13 (success, 15:55:58): "App open when received: No (process age 5605 ms)". **HyperOS started IntruderSnap's process specifically to deliver the lock-screen callbacks.** Health = **Verified**. Settings at the time: Android battery optimization off for IntruderSnap; Autostart / HyperOS battery saver not recorded. |
 | M2-6 | **Long-idle HyperOS background delivery (≥ 2 h idle)** | NOT TESTED | (Milestone 1 open item) The Verified state above does not by itself prove long-idle delivery. |
-| M2-7 | Reconciliation of missed callbacks | NOT TESTED | |
+| M2-7 | Reconciliation of missed callbacks | **PASS (consistent case)** · missed case NOT TESTED | Health: "Last successful reconciliation 2026-11-28 16:22:06 · Consistent with Android's counter", with Android's counter = 4 matching the incident. No missed callback has occurred, so the missed-failure path is verified on the emulator/unit tests only. |
 | M2-8 | Admin loss detection (in-app deactivation) | NOT TESTED | |
 | M2-9 | Admin loss via Android Settings | NOT TESTED | |
 | M2-10 | Reboot / Direct Boot with encrypted storage | NOT TESTED | |
 | M2-11 | Health confidence states | **PASS (Verified state)** | "Verified" with the correct reason after closed-app callbacks. Last reboot 14:20:10, boot count 2855, last admin-status check 15:58:12 were all shown. Permission-required state (after deactivation) not yet shown. |
 | M2-12 | Retention setting | NOT TESTED | |
 | M2-13 | Labs hidden by default | **PASS** | After install the tabs were Health · History · Setup · Settings (screenshot 15:24). Enabling experimental tools (audit record #14) added the Labs tab; its contents were shown only in an unlocked session. |
-| M2-14 | Camera Privacy Dashboard / lock-screen notification (experimental) | NOT TESTED | |
+| M2-14 | Camera Privacy Dashboard / lock-screen notification (experimental) | NOT TESTED | Related Labs observation (#22, 16:21:58): test E captured a frame from the background with deviceLocked=true, but the app had been on screen 12.5 s earlier, so the grace-period rule correctly recorded it as **INCONCLUSIVE**, not PASS. |
