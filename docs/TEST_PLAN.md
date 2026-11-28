@@ -73,6 +73,15 @@ On an Android 14 emulator image, set a PIN, activate the admin, then lock the em
 
 ## Install and upgrade
 
+> **One-time reinstall (from build 11):** builds up to 10 were signed with a different
+> throwaway key on every CI run, so Android refused to install them over each other. From build 11
+> every test build uses one fixed test key. The app installed now (signed by an older build) must be
+> removed once: Dashboard › **Deactivate**, then uninstall, then install build 11 or newer. This
+> deletes the Milestone 1 history on the phone (the shared reports and screenshots are kept in
+> `docs/evidence/`). After this, future builds install over each other and keep their data.
+> Because the old history is removed, **M2-0 (migration) cannot be tested on the device** after this
+> reinstall unless a fixed-key Milestone 1 build is installed first.
+
 | # | Action | Expected | Record |
 |---|---|---|---|
 | M2-0 | Install the new APK **over** the existing app (do not uninstall). Open it. | Health tab opens. History (after unlocking) contains a *Storage notice*: "Migrated N Milestone 1 record(s) into encrypted storage". The device admin is still active. | PASS/FAIL, N |

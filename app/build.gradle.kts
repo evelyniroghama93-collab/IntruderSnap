@@ -24,7 +24,22 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    signingConfigs {
+        // Fixed key for TEST builds only, so every CI build can be installed over the previous
+        // one (Android refuses an update signed with a different key). This key is public by
+        // design and must never sign a release; release signing will use a private key.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
