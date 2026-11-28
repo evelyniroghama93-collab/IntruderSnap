@@ -109,17 +109,19 @@ The feasibility branch stays separate from `main` until these results are review
 
 # Milestone 2 — Reliable Monitoring Core (branch `milestone-2-monitoring-core`)
 
-**Build:** debug-build-9 (commit 11a4bb8). CI build, 38 unit tests, 11 emulator integration tests and the no-INTERNET check pass. **None of that is a device result.**
+**Build:** debug-build-11 (commit a29da44), the first build signed with the fixed test key. CI build, 38 unit tests, 11 emulator integration tests and the no-INTERNET check pass; none of that is a device result.
+**Installed on the Redmi 12C on 2026-11-28** after a one-time uninstall (builds ≤ 10 used a different key each). Device evidence: `docs/evidence/2026-11-28/m2-health-verified-intrusion-152457.png`.
 
 | # | Physical-device test | Result | Observation |
 |---|---|---|---|
-| M2-0 | Upgrade and migration of Milestone 1 history | NOT TESTED | |
+| M2-0 | Upgrade and migration of Milestone 1 history | NOT TESTED | Not testable after the one-time uninstall (no Milestone 1 history left to migrate). |
 | M2-1 | Owner authentication (biometric and PIN fallback, auto-lock) | NOT TESTED | |
 | M2-2 | Protected settings + audit records | NOT TESTED | |
 | M2-3 | Protected deletion + "history cleared" record | NOT TESTED | |
-| M2-4 | Callback, counter, threshold with the new incident logic | NOT TESTED | |
+| M2-4 | Callback, counter, threshold with the new incident logic | **PASS (threshold part)** | Health banner: intrusion at 2026-11-28 15:24:57, "Failed attempts in incident: 3 (threshold 3)", detected by `DeviceAdminReceiver.onPasswordFailed`. Still to show: History records with Android counts 1-2-3 and the success record. |
 | M2-5 | New incident after a biometric unlock + 15-min gap | NOT TESTED | |
-| M2-6 | **Long-idle HyperOS background delivery** | NOT TESTED | (Milestone 1 open item) |
+| M2-6a | Closed-app delivery (app swiped away, short interval) | **PASS** | Health › Monitoring confidence = **Verified**: "A lock-screen callback reached IntruderSnap while the app was closed, within the last 30 days." The app was installed fresh earlier the same day, so this is a callback delivered while the app was closed. The idle time before it is not yet recorded (History › "App open when received: No (process age …)"). |
+| M2-6 | **Long-idle HyperOS background delivery (≥ 2 h idle)** | NOT TESTED | (Milestone 1 open item) The Verified state above does not by itself prove long-idle delivery. |
 | M2-7 | Reconciliation of missed callbacks | NOT TESTED | |
 | M2-8 | Admin loss detection (in-app deactivation) | NOT TESTED | |
 | M2-9 | Admin loss via Android Settings | NOT TESTED | |
