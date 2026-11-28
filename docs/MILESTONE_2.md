@@ -160,3 +160,5 @@ Removed: `app/src/main/java/com/intrudersnap/prototype/ui/dashboard/` (replaced 
 8. **Duplicate detection** relies on Android's counter. When the counter is unavailable, every callback is counted.
 9. **minSdk is 30 (Android 11).** Older Android versions are no longer supported.
 10. **Background camera** remains experimental and is not a feature (see §2.7).
+11. **Deactivation through HyperOS Settings (observed on the Redmi 12C):** `onDisableRequested`/`onDisabled` were not received. The loss was detected only when IntruderSnap next ran (app open), not immediately. The periodic check (~6 h) is the only background fallback.
+12. **Android's activation wording:** the system's standard description of the watch-login policy reads "…and lock the phone or erase all the phone's data if too many incorrect passwords are typed." That text is fixed by Android for this policy. IntruderSnap does **not** hold the force-lock or wipe-data policies and cannot do either; the Setup screen and IntruderSnap's own explanation say so.

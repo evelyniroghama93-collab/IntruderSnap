@@ -3,6 +3,6 @@
     <string name="app_name">IntruderSnap</string>
     <string name="device_admin_label">IntruderSnap lock-screen monitor</string>
     <string name="device_admin_description">Monitors failed screen-unlock attempts (watch-login policy only). IntruderSnap cannot wipe, lock or change the password of this device.</string>
-    <string name="device_admin_explanation">IntruderSnap needs the watch-login policy to be told when an incorrect PIN, pattern or password is entered on this phone\'s lock screen, and to read the system failed-attempt counter. It does not request wipe, lock or password-reset powers. You must deactivate this administrator before you can uninstall IntruderSnap.</string>
+    <string name="device_admin_explanation">IntruderSnap needs the watch-login policy to be told when an incorrect PIN, pattern or password is entered on this phone\'s lock screen, and to read the system failed-attempt counter. It does not request wipe, lock or password-reset powers: Android\'s standard description below mentions locking or erasing the phone, but IntruderSnap cannot do either. You must deactivate this administrator before you can uninstall IntruderSnap.</string>
     <string name="device_admin_disable_warning">Lock-screen monitoring will stop. Failed unlock attempts will no longer be recorded.</string>
 </resources>

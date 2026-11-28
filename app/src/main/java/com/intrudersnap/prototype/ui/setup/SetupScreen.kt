@@ -89,7 +89,9 @@ fun SetupScreen(vm: SetupViewModel = viewModel()) {
 
         Step("2. Device administrator", if (snap.adminActive) StepState.DONE else StepState.ACTION_NEEDED,
             "Grants only the watch-login policy: IntruderSnap is told about failed and successful unlock attempts. " +
-                "It cannot wipe, lock or change your password. Deactivate it before uninstalling.") {
+                "It cannot wipe, lock or change your password. Android's activation screen uses a fixed description " +
+                "for this policy that also mentions locking or erasing the phone; IntruderSnap does not have those " +
+                "powers. Deactivate it before uninstalling.") {
             if (!snap.adminActive) {
                 Button(onClick = { adminLauncher.launch(AdminController.activationIntent(context)) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Activate on the system screen")
